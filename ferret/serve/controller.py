@@ -112,6 +112,7 @@ class Controller:
     def list_models(self):
         model_names = set()
 
+        print(f'worker info: {self.worker_info}')
         for w_name, w_info in self.worker_info.items():
             model_names.update(w_info.model_names)
 

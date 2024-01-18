@@ -85,7 +85,7 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             model.load_state_dict(mm_projector_weights, strict=False)
         else:
             tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
-            model = FERRETLlamaForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, **kwargs)
+            model = FERRETLlamaForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, local_files_only=True, **kwargs)
     else:
         # Load language model
         if model_base is not None:
@@ -120,6 +120,7 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
 
         vision_tower = model.get_vision_tower()
         vision_tower_path = os.path.join(model_path, 'vision_tower')
+        print(f'{vision_tower_path}')
         if not vision_tower.is_loaded or os.path.exists(vision_tower_path):
             if os.path.exists(vision_tower_path):
                 print(f'Start Loading vision tower from {vision_tower_path}')
@@ -135,5 +136,4 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
         context_len = model.config.max_sequence_length
     else:
         context_len = 2048
-
     return tokenizer, model, image_processor, context_len

@@ -119,9 +119,10 @@ def get_conv_log_filename():
 
 
 def get_model_list():
-    ret = requests.post(args.controller_url + "/refresh_all_workers")
-    assert ret.status_code == 200
+    # ret = requests.post(args.controller_url + "/refresh_all_workers")
+    # assert ret.status_code == 200
     ret = requests.post(args.controller_url + "/list_models")
+    print(ret.json())
     models = ret.json()["models"]
     models.sort(key=lambda x: priority.get(x, x))
     logger.info(f"Models: {models}")
@@ -753,6 +754,7 @@ if __name__ == "__main__":
     logger.info(f"args: {args}")
 
     models = get_model_list()
+    print(f'model list: {models}')
 
     logger.info(args)
     demo = build_demo(args.embed)

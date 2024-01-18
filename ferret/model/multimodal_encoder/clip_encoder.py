@@ -58,6 +58,7 @@ class CLIPVisionTower(nn.Module):
         if not delay_load:
             self.load_model()
         else:
+            print('---vit delay_load---')
             self.cfg_only = CLIPVisionConfig.from_pretrained(self.vision_tower_name)
 
     def load_model(self, vision_tower_path=None):

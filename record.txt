@@ -24,9 +24,6 @@ python3 -m ferret.model.apply_delta \
     --target ferret-7b-v1-3 \
     --delta ferret-7b-delta
 
-内部会要下载 clip-l 权重，如果失败可以多重试几次
-
-
 
 4 demo 本地部署
 
