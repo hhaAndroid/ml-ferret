@@ -1,0 +1,42 @@
+1 环境安装
+conda activate pt20cu117
+pip install --upgrade pip  # enable PEP 660 support
+pip install -e .
+pip install pycocotools
+pip install protobuf==3.20.0
+
+2 模型下载
+
+cd ..
+git lfs install
+git clone https://huggingface.co/lmsys/vicuna-7b-v1.3
+git clone https://huggingface.co/liuhaotian/llava-336px-pretrain-vicuna-7b-v1.3 下载投影层
+
+cd ml-ferret/
+wget https://docs-assets.developer.apple.com/ml-research/models/ferret/ferret-7b/ferret-7b-delta.zip
+unzip ferret-7b-delta.zip
+
+
+3 合并权重
+
+python3 -m ferret.model.apply_delta \
+    --base ../vicuna-7b-v1.3 \
+    --target ferret-7b-v1-3 \
+    --delta ferret-7b-delta
+
+内部会要下载 clip-l 权重，如果失败可以多重试几次
+
+
+
+4 demo 本地部署
+
+考虑到即使下载了权重也会访问 huggingface,因此可以在 from_pretrained 里面加上 local_files_only=True 参数
+clip-l 权重如果下载了，可以直接将 config.json 里面写死
+mm_vision_tower 改成 /home/huanghaian/.cache/huggingface/hub/models--openai--clip-vit-large-patch14-336/snapshots/ce19dc912ca5cd21c8a653c79e251e808ccabcd1/
+
+
+python -m ferret.serve.controller --port 10000
+python -m ferret.serve.gradio_web_server --controller-url http://localhost:10000 --model-list-mode reload --add_region_feature
+CUDA_VISIBLE_DEVICES=0 python -m ferret.serve.model_worker --controller http://localhost:10000 --port 40000 --worker http://localhost:40000 --model-path ferret-7b-v1-3 --add_region_feature
+
+
