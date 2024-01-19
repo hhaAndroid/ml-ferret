@@ -113,11 +113,11 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
         mm_im_region_fea_token = getattr(model.config, "im_region_fea_token", None)
         if mm_use_im_patch_token:
             tokenizer.add_tokens([DEFAULT_IMAGE_PATCH_TOKEN], special_tokens=True)
-        if mm_im_region_fea_token is not None:
+        if mm_im_region_fea_token is not None: # true
             tokenizer.add_tokens([DEFAULT_REGION_FEA_TOKEN], special_tokens=True)
         if mm_use_im_start_end:
             tokenizer.add_tokens([DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN], special_tokens=True)
-        model.resize_token_embeddings(len(tokenizer))
+        model.resize_token_embeddings(len(tokenizer)) # 新加入的 token 随机初始化。我们在推理时候，由于词汇表已经 +1 了，所以这个操作等于啥都没有做
 
         vision_tower = model.get_vision_tower()
         vision_tower_path = os.path.join(model_path, 'vision_tower')
@@ -128,7 +128,7 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
                 vision_tower.load_model(vision_tower_path=vision_tower_path)
                 print(f'Finish Loading vision tower from {vision_tower_path}')
             else:
-                vision_tower.load_model()
+                vision_tower.load_model() # 加载权重
 
         vision_tower.to(device='cuda', dtype=torch.float16)
         image_processor = vision_tower.image_processor

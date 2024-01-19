@@ -144,7 +144,7 @@ class ModelWorker:
         print('orig prompt:' + prompt)
         ori_prompt = prompt
         region_masks = params.get('region_masks', None)
-        print('region_masks:' + region_masks)
+        # print('region_masks:', region_masks)
 
         images = params.get("images", None)
         num_image_tokens = 0
@@ -157,6 +157,7 @@ class ModelWorker:
                 if self.keep_aspect_ratio:
                     images = process_images(images, image_processor, model.config)
                 else:# true 336
+                    print('image size',image_h, image_w)
                     images = image_processor(images, return_tensors='pt', do_resize=True, do_center_crop=False, size=[image_h, image_w])['pixel_values']
 
                 if type(images) is list:

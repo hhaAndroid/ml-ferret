@@ -5,6 +5,8 @@ pip install -e .
 pip install pycocotools
 pip install protobuf==3.20.0
 
+graido 3.26.0
+
 2 模型下载
 
 cd ..
@@ -35,5 +37,21 @@ mm_vision_tower 改成 /home/huanghaian/.cache/huggingface/hub/models--openai--c
 python -m ferret.serve.controller --port 10000
 python -m ferret.serve.gradio_web_server --controller-url http://localhost:10000 --model-list-mode reload --add_region_feature
 CUDA_VISIBLE_DEVICES=0 python -m ferret.serve.model_worker --controller http://localhost:10000 --port 40000 --worker http://localhost:40000 --model-path ferret-7b-v1-3 --add_region_feature
+
+{'model': 'ferret-7b-v1-3', 
+'prompt': 'A chat between a human and an AI that understands visuals. In images, 
+[x, y] denotes points: top-left [0, 0], bottom-right [width-1, height-1]. 
+Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. Image size: 1000x1000. 
+Follow instructions.  USER: <image>\nwhat is this [133, 0, 799, 674] <region_fea> ASSISTANT:', 
+'temperature': 0.2, 'top_p': 0.7, 'max_new_tokens': 512, 'stop': '</s>', 'images': "List of 1 images: ['1abc0fa58ffd51b3c2c2577931c28b92']"}
+
+
+orig prompt: A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0, 0], 
+bottom-right [width-1, height-1]. Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. 
+Image size: 1000x1000. Follow instructions.  USER: <image> \nwhat is this [133, 0, 799, 674] <region_fea> ASSISTANT:
+
+CUDA_VISIBLE_DEVICES=0 python demo.py 
+
+
 
 

@@ -359,6 +359,11 @@ def http_bot(state, model_selector, temperature, top_p, max_new_tokens, refer_in
     start_tstamp = time.time()
     model_name = model_selector
     print('state:', state)
+    print('refer_input_state',
+          refer_input_state['region_coordinates'],
+          refer_input_state['region_placeholder_tokens'],
+          refer_input_state['region_masks_in_prompts'],
+          )
 
     if state.skip_next:
         # This generate call is skipped due to invalid inputs

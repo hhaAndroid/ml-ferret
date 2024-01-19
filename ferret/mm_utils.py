@@ -16,7 +16,7 @@ def process_images(images, image_processor, model_cfg):
 
 
 def tokenizer_image_token(prompt, tokenizer, image_token_index=IMAGE_TOKEN_INDEX, return_tensors=None):
-    prompt_chunks = [tokenizer(chunk).input_ids for chunk in prompt.split('<image>')]
+    prompt_chunks = [tokenizer(chunk).input_ids for chunk in prompt.split('<image>')] # clip tokenizer 时候会追加开始符
 
     def insert_separator(X, sep):
         return [ele for sublist in zip(X, [sep]*len(X)) for ele in sublist][:-1]
@@ -34,7 +34,7 @@ def tokenizer_image_token(prompt, tokenizer, image_token_index=IMAGE_TOKEN_INDEX
         if return_tensors == 'pt':
             return torch.tensor(input_ids, dtype=torch.long)
         raise ValueError(f'Unsupported tensor type: {return_tensors}')
-    return input_ids
+    return input_ids # 第一个 token 是 bos，然后是文本的 token，碰到 <image> 将 id 设置为 -200，后面会替换为图片特征， 碰到 <region_fea> 设置为 32000，后面也会替换为区域特征， <region_fea> 是特殊 token，但是 <image> 不是
 
 
 def get_model_name_from_path(model_path):
