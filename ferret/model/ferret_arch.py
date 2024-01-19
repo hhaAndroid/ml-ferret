@@ -476,6 +476,7 @@ class FERRETMetaForCausalLM(ABC):
         else:
             region_flag = False
         region_geo_sampler = region_flag and getattr(self.config, 'region_geo_sampler', False)
+        print(f"region_geo_sampler: {region_geo_sampler}")
 
         vision_tower = self.get_vision_tower()
         if vision_tower is None or images is None or input_ids.shape[1] == 1:
@@ -509,6 +510,7 @@ class FERRETMetaForCausalLM(ABC):
         new_input_embeds = []
         new_labels = [] if labels is not None else None
         cur_image_idx = 0
+        print('input_ids:', input_ids)
         for batch_idx, cur_input_ids in enumerate(input_ids):
             if (cur_input_ids == IMAGE_TOKEN_INDEX).sum() == 0:
                 # multimodal LLM, but the current sample is not multimodal
@@ -620,7 +622,7 @@ class FERRETMetaForCausalLM(ABC):
                 new_attn_mask_pad_left = torch.full((attention_mask.shape[0], new_input_embeds.shape[1] - input_ids.shape[1]), True, dtype=attention_mask.dtype, device=attention_mask.device)
                 attention_mask = torch.cat((new_attn_mask_pad_left, attention_mask), dim=1)
                 assert attention_mask.shape == new_input_embeds.shape[:2]
-
+        print('new_input_embeds:', new_input_embeds.shape, 'new_labels:', new_labels)
         return None, attention_mask, past_key_values, new_input_embeds, new_labels
 
     def initialize_vision_tokenizer(self, model_args, tokenizer, add_region_feature=False):

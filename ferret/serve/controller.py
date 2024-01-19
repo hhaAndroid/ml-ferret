@@ -203,7 +203,7 @@ class Controller:
 
         try:
             response = requests.post(worker_addr + "/worker_generate_stream",
-                json=params, stream=True, timeout=5)
+                json=params, stream=True, timeout=5) # 调用 worker 的 worker_generate_stream 函数，实际上是 model
             for chunk in response.iter_lines(decode_unicode=False, delimiter=b"\0"):
                 if chunk:
                     yield chunk + b"\0"

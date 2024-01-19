@@ -55,7 +55,7 @@ def generate_mask_for_feature(coor, raw_w, raw_h, mask=None):
         assert mask.shape[0] == raw_w and mask.shape[1] == raw_h
     coor_mask = torch.zeros((raw_w, raw_h))
     # Assume it samples a point.
-    if len(coor) == 2:
+    if len(coor) == 2: # 用户点击一个点，转换为一个方形的mask，半径是 5 像素
         # Define window size
         span = 5
         # Make sure the window does not exceed array bounds
@@ -74,7 +74,7 @@ def generate_mask_for_feature(coor, raw_w, raw_h, mask=None):
     # coor_mask = torch.from_numpy(coor_mask)
     # pdb.set_trace()
     assert len(coor_mask.nonzero()) != 0
-    return coor_mask.tolist()
+    return coor_mask.tolist() # 变成 2 维的 list
 
 
 def draw_box(coor, region_mask, region_ph, img, input_mode):
@@ -113,12 +113,15 @@ def draw_box(coor, region_mask, region_ph, img, input_mode):
 
 
 def get_conv_log_filename():
+    # 每次运行的 prompt 和结果都会记录在这个文件里
     t = datetime.datetime.now()
     name = os.path.join(LOGDIR, f"{t.year}-{t.month:02d}-{t.day:02d}-conv.json")
     return name
 
 
 def get_model_list():
+    # bug: 如果开启后会导致 gradio 获取到模型
+    # 如果不想注释，就要在刷新了，sleep 一点时间，让模型重新注册进去，否则会出现问题
     # ret = requests.post(args.controller_url + "/refresh_all_workers")
     # assert ret.status_code == 200
     ret = requests.post(args.controller_url + "/list_models")
@@ -173,6 +176,7 @@ def load_demo_refresh_model_list(request: gr.Request):
             gr.Accordion.update(visible=True))
 
 
+# 写结果到文件
 def vote_last_response(state, vote_type, model_selector, request: gr.Request):
     with open(get_conv_log_filename(), "a") as fout:
         data = {
@@ -241,6 +245,7 @@ def show_location(sketch_pad, chatbot):
         model_output = round_i[1]
         # TODO: Difference: vocab representation.
         # pattern = r'\[x\d*=(\d+(?:\.\d+)?), y\d*=(\d+(?:\.\d+)?), x\d*=(\d+(?:\.\d+)?), y\d*=(\d+(?:\.\d+)?)\]'
+        # 匹配出回复的坐标，然后绘制
         pattern = r'\[(\d+(?:\.\d+)?), (\d+(?:\.\d+)?), (\d+(?:\.\d+)?), (\d+(?:\.\d+)?)\]'
         matches = re.findall(pattern, model_output)
         for match in matches:
@@ -293,7 +298,7 @@ def add_text(state, text, image_process_mode, original_image, sketch_pad, reques
         print('No location, copy original image in add_text')
 
     if image is not None:
-        if state.first_round:
+        if state.first_round: # 第一轮对话
             text = text[:1200]  # Hard cut-off for images
             if '<image>' not in text:
                 # text = '<Image><image></Image>' + text
@@ -347,11 +352,13 @@ def format_region_prompt(prompt, refer_input_state):
     return prompt
     
 
+# 发送请求到 controller
 def http_bot(state, model_selector, temperature, top_p, max_new_tokens, refer_input_state, request: gr.Request):
 # def http_bot(state, model_selector, temperature, top_p, max_new_tokens, request: gr.Request):
     logger.info(f"http_bot. ip: {request.client.host}")
     start_tstamp = time.time()
     model_name = model_selector
+    print('state:', state)
 
     if state.skip_next:
         # This generate call is skipped due to invalid inputs
@@ -387,7 +394,7 @@ def http_bot(state, model_selector, temperature, top_p, max_new_tokens, refer_in
         #     template_name = "llama_2"
         # else:
         #     template_name = "vicuna_v1"
-        new_state = conv_templates[template_name].copy()
+        new_state = conv_templates[template_name].copy() # 得到输入的模板
         new_state.append_message(new_state.roles[0], state.messages[-2][1])
         new_state.append_message(new_state.roles[1], None)
         state = new_state
@@ -409,7 +416,7 @@ def http_bot(state, model_selector, temperature, top_p, max_new_tokens, refer_in
     # Construct prompt
     prompt = state.get_prompt()
     if args.add_region_feature:
-        prompt = format_region_prompt(prompt, refer_input_state)
+        prompt = format_region_prompt(prompt, refer_input_state) # 将 region feature token 替换为真实的 region feature
 
     all_images = state.get_images(return_pil=True)
     all_image_hash = [hashlib.md5(image.tobytes()).hexdigest() for image in all_images]
@@ -444,14 +451,14 @@ def http_bot(state, model_selector, temperature, top_p, max_new_tokens, refer_in
     try:
         # Stream output
         response = requests.post(worker_addr + "/worker_generate_stream",
-            headers=headers, json=pload, stream=True, timeout=10)
+            headers=headers, json=pload, stream=True, timeout=10) # 开始调用模型，期待返回
         for chunk in response.iter_lines(decode_unicode=False, delimiter=b"\0"):
             if chunk:
                 data = json.loads(chunk.decode())
-                if data["error_code"] == 0:
+                if data["error_code"] == 0:  # 正确返回数据
                     output = data["text"][len(prompt):].strip()
-                    output = post_process_code(output)
-                    state.messages[-1][-1] = output + "▌"
+                    output = post_process_code(output)  # 后处理
+                    state.messages[-1][-1] = output + "▌"  # 信息存储到状态池里面
                     yield (state, state.to_gradio_chatbot()) + (disable_btn,) * 5
                 else:
                     output = data["text"] + f" (error_code: {data['error_code']})"
@@ -470,7 +477,7 @@ def http_bot(state, model_selector, temperature, top_p, max_new_tokens, refer_in
     finish_tstamp = time.time()
     logger.info(f"{output}")
 
-    with open(get_conv_log_filename(), "a") as fout:
+    with open(get_conv_log_filename(), "a") as fout: # 存储起来
         data = {
             "tstamp": round(finish_tstamp, 4),
             "type": "chat",

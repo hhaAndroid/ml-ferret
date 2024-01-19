@@ -135,14 +135,16 @@ class ModelWorker:
         }
 
     @torch.inference_mode()
-    def generate_stream(self, params):
+    def generate_stream(self, params): # 最终模型推理代码
         tokenizer, model, image_processor = self.tokenizer, self.model, self.image_processor
 
         image_w = self.image_w
         image_h = self.image_h
         prompt = params["prompt"]
+        print('orig prompt:' + prompt)
         ori_prompt = prompt
         region_masks = params.get('region_masks', None)
+        print('region_masks:' + region_masks)
 
         images = params.get("images", None)
         num_image_tokens = 0
@@ -154,7 +156,7 @@ class ModelWorker:
                 images = [load_image_from_base64(image) for image in images]
                 if self.keep_aspect_ratio:
                     images = process_images(images, image_processor, model.config)
-                else:
+                else:# true 336
                     images = image_processor(images, return_tensors='pt', do_resize=True, do_center_crop=False, size=[image_h, image_w])['pixel_values']
 
                 if type(images) is list:
@@ -178,7 +180,7 @@ class ModelWorker:
         if region_masks is not None:
             assert self.add_region_feature
             region_masks = [[torch.Tensor(region_mask_i).cuda().half() for region_mask_i in region_masks]]
-            image_args["region_masks"] = region_masks
+            image_args["region_masks"] = region_masks  # 二维列表？
             logger.info("Add region_masks to image_args.")
         else:
             logger.info("No region_masks for this sample.")
@@ -191,7 +193,7 @@ class ModelWorker:
         max_new_tokens = min(int(params.get("max_new_tokens", 256)), 1024)
         stop_str = params.get("stop", None)
 
-        stop_idx = None
+        stop_idx = None # 遇到 </s> 停止
         if stop_str is not None:
             stop_idx = tokenizer(stop_str).input_ids
             if len(stop_idx) == 1:
@@ -200,20 +202,22 @@ class ModelWorker:
                 stop_idx = None
 
         # input_ids = tokenizer(prompt).input_ids
+        # 把除图片的文本数据进行 token 编码
+        print('final prompt', prompt)
         input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors=None)
         output_ids = list(input_ids)
         pred_ids = []
 
-        max_src_len = self.context_len - max_new_tokens - 8
+        max_src_len = self.context_len - max_new_tokens - 8  # 不能超过长度
         input_ids = input_ids[-max_src_len:]
 
         past_key_values = None
-        for i in range(max_new_tokens):
+        for i in range(max_new_tokens): # 一个一个 token 进行预测
             if i == 0:
                 out = model(
                     torch.as_tensor([input_ids]).cuda(),
                     use_cache=True,
-                    **image_args)
+                    **image_args) # 开始一次推理
                 logits = out.logits
                 past_key_values = out.past_key_values
             else:
@@ -227,6 +231,7 @@ class ModelWorker:
                 logits = out.logits
                 past_key_values = out.past_key_values
 
+            # 自己写后处理
             last_token_logits = logits[0][-1]
             if temperature < 1e-4:
                 token = int(torch.argmax(last_token_logits))
@@ -238,7 +243,7 @@ class ModelWorker:
             pred_ids.append(token)
 
             if stop_idx is not None and token == stop_idx:
-                stopped = True
+                stopped = True  # 停止
             elif token == tokenizer.eos_token_id:
                 stopped = True
             else:

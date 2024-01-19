@@ -41,6 +41,7 @@ class FERRETLlamaForCausalLM(LlamaForCausalLM, FERRETMetaForCausalLM):
 
     def __init__(self, config):
         super(LlamaForCausalLM, self).__init__(config)
+        print('FERRETLlamaForCausalLM config:', config)
         self.model = FERRETLlamaModel(config)
 
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
